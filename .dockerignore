@@ -1,0 +1,15 @@
+**/.env
+**/.env.*
+!**/.env.example
+**/.venv
+**/__pycache__
+**/*.pyc
+**/node_modules
+**/dist
+**/.angular
+**/.git
+**/*.log
+**/.vscode
+pruebas
+docs
+CONTEXTO.md

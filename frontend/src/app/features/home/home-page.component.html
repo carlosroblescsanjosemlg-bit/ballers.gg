@@ -1,0 +1,30 @@
+<div class="ballers-app">
+  <app-header active="home" (navigate)="navigate.emit($event)" />
+  <main class="home-main">
+    <section class="home-intro" aria-labelledby="home-title">
+      <span class="kicker subdued">TU COMUNIDAD. TU COMPETICIÓN.</span>
+      <h1 id="home-title">PREPARA. <span>COMPITE.</span></h1>
+      <p>Todo empieza aquí. Añade a tus jugadores o pon en marcha un torneo.</p>
+    </section>
+    @if(auth.error()){<div class="error" role="alert">{{auth.error()}}</div>}
+    <div class="home-actions">
+      <section class="home-action home-players" aria-labelledby="home-players-title">
+        <div class="home-card-top"><span>01 / TU PLANTILLA</span><span aria-hidden="true">＋</span></div>
+        <svg class="home-card-icon" viewBox="0 0 120 100" aria-hidden="true"><path d="m40 13-28 18 16 24 13-9v41h39V46l13 9 16-24-29-18c-3 10-10 15-20 15S43 23 40 13Z"/><path d="M50 45h20M60 35v20"/></svg>
+        <h2 id="home-players-title">AÑADIR JUGADORES<span>.</span></h2>
+        <p>Un nick, un escudo y ganas de competir. Crea los perfiles de tu gente y prepara la plantilla.</p>
+        <button class="primary" (click)="start.emit('players')">Añadir jugador <span aria-hidden="true">↗</span></button>
+      </section>
+      <section class="home-action home-tournaments" aria-labelledby="home-tournaments-title">
+        <div class="home-card-top"><span>02 / LA COMPETICIÓN</span><span aria-hidden="true">↗</span></div>
+        <svg class="home-card-icon" viewBox="0 0 120 100" aria-hidden="true"><path d="M40 10h40v23c0 19-8 32-20 32S40 52 40 33Zm0 6H23v14c0 13 9 20 20 20m37-34h17v14c0 13-9 20-20 20M60 65v19m-16 0h32v9H44Z"/></svg>
+        <h2 id="home-tournaments-title">CREAR TORNEO<span>.</span></h2>
+        <p>Elige el formato, reúne a tus rivales y genera el cuadro. La próxima copa empieza contigo.</p>
+        <button class="primary" (click)="start.emit('tournaments')">Crear torneo <span aria-hidden="true">↗</span></button>
+      </section>
+    </div>
+    <div class="home-session"><span class="live-dot" aria-hidden="true"></span>@if(auth.identity()?.mode==='guest'){<p>Modo invitado · Tus jugadores y torneos serán temporales durante esta sesión.</p>}@else{<p>Tu espacio, {{auth.identity()?.username}} · Tus jugadores y torneos se guardan en tu cuenta.</p>}</div>
+  </main>
+  <footer class="home-footer"><span>BUILT FOR THE GAME.</span><span>BALLERS.GG / FC 27</span></footer>
+</div>
+

@@ -1,0 +1,12 @@
+<dialog #dialog class="dialog" aria-labelledby="form-title" (cancel)="cancel($event)" (click)="backdrop($event)">
+  <div class="dialog-header"><span class="kicker">BALLERS.GG / LA COMUNIDAD</span><button type="button" aria-label="Cerrar formulario" (click)="close()" [disabled]="busy()">×</button></div>
+  <div class="form-title-line"><span class="form-cross" aria-hidden="true">✳</span><h2 id="form-title">{{ editing ? 'EDITAR BALLER.' : 'NUEVO FICHAJE.' }}</h2></div><p class="form-intro">{{ editing ? 'Actualiza su identidad. Su historia continúa.' : 'El próximo nombre que va a dar que hablar.' }}</p>
+  <form (ngSubmit)="save()"><fieldset [disabled]="busy()">
+    <label for="nick">01 / NICK <span>*</span></label><input #nickInput id="nick" name="nick" [(ngModel)]="nick" minlength="2" maxlength="24" required placeholder="Tu nombre en el juego" autocomplete="off" aria-describedby="nick-help"><small id="nick-help">De 2 a 24 caracteres. Único, sin distinguir mayúsculas ni acentos.</small>
+    <label class="logo-label" for="logo">02 / TU ESCUDO <span class="optional">OPCIONAL</span></label>
+    <div class="logo-picker"><div class="avatar">@if (preview) {<img [src]="preview" alt="Vista previa del logo">} @else {<span>{{ initials(nick) }}</span>}</div><div><input id="logo" type="file" aria-label="Logo del participante" accept="image/png,image/jpeg,image/webp" (change)="selectLogo($event)"><small>PNG, JPG o WebP · Hasta 2 MB<br>Máximo 4096 × 4096 píxeles</small>@if (preview) {<button class="text-button" type="button" (click)="clearLogo()">Quitar logo</button>}</div></div>
+    <label class="active-option"><input type="checkbox" name="isActive" [(ngModel)]="isActive"><span><strong>Jugador activo</strong><small>Puedes desactivarlo en cualquier momento. Sus datos se conservarán.</small></span></label>
+  </fieldset>
+  @if (error()) {<div class="error" role="alert">{{ error() }}</div>}
+  <div class="form-actions"><button type="button" class="secondary" (click)="close()" [disabled]="busy()">Cancelar</button><button type="submit" class="primary" [disabled]="busy()">{{ busy() ? 'Guardando…' : editing ? 'Guardar cambios' : 'Añadir jugador' }} <span>↗</span></button></div></form>
+</dialog>

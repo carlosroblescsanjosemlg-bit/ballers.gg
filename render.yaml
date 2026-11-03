@@ -1,0 +1,23 @@
+# Un servicio: Angular compilado + FastAPI en el mismo origen HTTPS.
+services:
+  - type: web
+    name: ballers-gg
+    runtime: docker
+    plan: free
+    region: frankfurt
+    dockerfilePath: ./Dockerfile
+    dockerContext: .
+    healthCheckPath: /api/health
+    envVars:
+      - key: SESSION_COOKIE_SECURE
+        value: "1"
+      - key: DB_HOST
+        sync: false
+      - key: DB_PORT
+        value: "3306"
+      - key: DB_NAME
+        sync: false
+      - key: DB_USER
+        sync: false
+      - key: DB_PASSWORD
+        sync: false

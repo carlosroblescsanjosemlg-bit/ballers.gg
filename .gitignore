@@ -1,0 +1,24 @@
+.env
+.venv/
+__pycache__/
+.pytest_cache/
+*.pyc
+node_modules/
+dist/
+.angular/
+coverage/
+*.sqlite3
+*.log
+.vscode/
+
+# Secretos locales y certificados privados
+.env.*
+!.env.example
+*.pem
+*.key
+*.pfx
+*.sql.gz
+
+# Notas e instrucciones locales de trabajo
+CONTEXTO.md
+AGENTS.md

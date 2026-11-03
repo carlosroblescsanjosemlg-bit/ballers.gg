@@ -1,0 +1,29 @@
+<main class="access-shell">
+  <section class="access-art" aria-labelledby="welcome-title">
+    <a class="wordmark" href="/">ballers<span class="gg">.gg</span></a>
+    <div><p class="kicker">TU GENTE. TU COMPETICIÓN.</p><h1 id="welcome-title">EL JUEGO<br>EMPIEZA<br><span>CONTIGO.</span></h1><p>Prepara tu plantilla.<br>La próxima rivalidad empieza aquí.</p></div>
+    <span class="kicker">FC 27 / BUILT FOR THE GAME ✳</span>
+  </section>
+  <section class="access-panel" aria-labelledby="access-title">
+    <span class="kicker subdued">01 / ENTRA AL CAMPO</span>
+    <h2 id="access-title">{{ register() ? 'CREA TU CUENTA.' : 'VUELVE AL JUEGO.' }}</h2>
+    <p class="access-description">{{ register() ? 'Tus jugadores se guardarán en tu cuenta, para la próxima vez.' : 'Inicia sesión para recuperar tus jugadores.' }}</p>
+    @if (auth.error()) { <div class="error" role="alert">{{ auth.error() }}</div> }
+    <form #accessForm="ngForm" (ngSubmit)="submit(accessForm)">
+      <label for="username">Usuario</label><input #userField="ngModel" aria-describedby="username-help username-error" [attr.aria-invalid]="userField.touched && userField.invalid" id="username" name="username" [(ngModel)]="username" required minlength="3" maxlength="24" autocomplete="username" pattern="[A-Za-z0-9_.\-]+" placeholder="Tu nombre en Ballers">
+      <small id="username-help">3–24 letras, números, puntos o guiones. Sin espacios.</small>
+      @if (userField.touched && userField.invalid) {<small id="username-error" class="field-error" role="alert">Introduce un usuario de 3 a 24 caracteres válidos.</small>}
+      <label for="password">Contraseña</label><input #passwordField="ngModel" aria-describedby="password-help password-error" [attr.aria-invalid]="passwordField.touched && passwordField.invalid" id="password" name="password" type="password" [(ngModel)]="password" required [minlength]="register() ? 10 : 1" maxlength="128" [autocomplete]="register() ? 'new-password' : 'current-password'" placeholder="Tu contraseña">
+      <small id="password-help">{{ register() ? 'Entre 10 y 128 caracteres.' : 'Introduce tu contraseña.' }} @if (register()) {<span>{{password.length}} / 10 mínimo</span>}</small>
+      @if (passwordField.touched && passwordField.invalid) {<small id="password-error" class="field-error" role="alert">{{register() ? 'La contraseña necesita al menos 10 caracteres.' : 'Introduce tu contraseña.'}}</small>}
+      @if (register()) {
+        <label for="confirmation">Repite la contraseña</label>
+        <input #confirmationField="ngModel" id="confirmation" name="confirmation" type="password" [(ngModel)]="confirmation" required minlength="10" maxlength="128" autocomplete="new-password" aria-describedby="confirmation-error" [attr.aria-invalid]="confirmationField.touched && (confirmationField.invalid || confirmation !== password)">
+        @if (confirmationField.touched && (confirmationField.invalid || confirmation !== password)) {<small id="confirmation-error" class="field-error" role="alert">Repite la misma contraseña, de al menos 10 caracteres.</small>}
+      }
+      <button class="primary" type="submit" [disabled]="auth.busy()">{{ auth.busy() ? 'Conectando…' : register() ? 'Crear cuenta' : 'Iniciar sesión' }} <span>↗</span></button>
+    </form>
+    <p class="access-switch">{{ register() ? '¿Ya tienes cuenta?' : '¿Primera vez por aquí?' }} <button (click)="switchMode()" [disabled]="auth.busy()">{{ register() ? 'Inicia sesión' : 'Crea tu cuenta' }}</button></p>
+    <div class="guest-entry"><button class="text-action" (click)="auth.enter('guest')" [disabled]="auth.busy()">Entrar como invitado <span>↗</span></button><p>Prueba con hasta 32 jugadores temporales. Al salir o cerrar esta pestaña, no podrás recuperarla. Caduca a las 2 horas.</p></div>
+  </section>
+</main>

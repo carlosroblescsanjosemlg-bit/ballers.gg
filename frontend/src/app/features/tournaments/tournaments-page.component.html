@@ -1,0 +1,135 @@
+<div class="ballers-app">
+  <app-header active="tournaments" (navigate)="navigate.emit($event)" />
+  <div class="session-banner">@if(auth.identity()?.mode === 'guest'){<strong>MODO INVITADO</strong> · Tus torneos son temporales y se descartan al salir.} @else {Tus torneos y cuadros son privados y se guardan en tu cuenta.} @if(auth.error()){<div class="error" role="alert">{{auth.error()}}</div>}</div>
+  <main class="tournament-main">
+    @if(mode() === 'list') {
+      <section class="competition-intro"><div><span class="kicker subdued">02 / LA COMPETICIÓN</span><h1>LA COPA<br><span>TE ESPERA.</span></h1><p>Tú eliges a los rivales. El sorteo marca el camino.</p></div><div class="cup-emblem" aria-hidden="true"><svg viewBox="0 0 160 180"><path d="M48 20h64v36c0 31-13 51-32 51S48 87 48 56Zm0 9H23v22c0 20 14 32 31 32m58-54h25v22c0 20-14 32-31 32M80 107v37m-22 0h44v15H58Z"/></svg><span>ONE COMMUNITY.<br>EVERYTHING TO PLAY FOR.</span></div></section>
+      <div class="tournament-heading"><div><span class="kicker subdued">TU PALMARÉS EMPIEZA AQUÍ</span><h2>TUS TORNEOS<span class="orange">.</span></h2></div><button class="primary" (click)="openCreate()">＋ Crear torneo <span>↗</span></button></div>
+    } @else {
+      <button class="text-action back-tournaments" (click)="loadList()" [disabled]="saving()">← Volver a torneos</button>
+    }
+    @if(error() && mode()!=='create'){<div class="error" role="alert">{{error()}} @if(!saving()){<button (click)="retry()">{{mode()==='create'?'Recargar jugadores':'Reintentar'}}</button>}</div>}
+    @if(notice() && mode()!=='create' && !drawActive()){<div class="notice" role="status">{{notice()}}</div>}
+    @if(mode() === 'list') {
+      @if(loading()){<div class="tournament-empty" role="status">Cargando tus torneos…</div>}
+      @else if(!error() && !data()?.total){<div class="tournament-empty"><span class="empty-number" aria-hidden="true">00</span><h3>TODA LEYENDA<br>EMPIEZA CON UN SORTEO.</h3><p>Elige un formato, reúne a tus jugadores activos y crea tu primera competición.</p><button class="text-action" (click)="openCreate()">Crear mi primer torneo ↗</button></div>}
+      @else if(!error()) {
+        <div class="tournament-list">@for(t of data()?.items;track t.id){<article class="tournament-card"><div class="card-topline"><span>{{formatLabel(t.format)}} · {{pairLabel(t.pair_mode)}}</span><span>#{{t.id.toString().padStart(2,'0')}}</span></div><h3>{{t.name}}</h3><span class="tournament-status" [class.finished-status]="t.finished_at">{{t.finished_at?'✓ Finalizado':'En juego'}}</span><div class="tournament-card-stats"><div><strong>{{t.participant_count}}</strong><span>JUGADORES</span></div></div><div class="card-bottomline"><time>{{t.created_at+'Z'|date:'dd.MM.yyyy'}}</time><button class="delete-tournament" (click)="openDelete(t)" [attr.aria-label]="'Eliminar torneo '+t.name">Eliminar</button><button class="text-action" (click)="openDetail(t.id)" [attr.aria-label]="'Ver cuadro de '+t.name">Ver cuadro ↗</button></div></article>}</div>
+        <div class="directory-footer"><span>{{data()?.total}} TORNEOS GUARDADOS</span>@if(pages()>1){<div class="pagination"><button aria-label="Página anterior" [disabled]="page()===1" (click)="changePage(page()-1)">←</button><span>{{page()}} / {{pages()}}</span><button aria-label="Página siguiente" [disabled]="page()===pages()" (click)="changePage(page()+1)">→</button></div>}</div>
+      }
+    }
+    @if(mode() === 'create') {
+      <section class="create-tournament"><span class="kicker subdued">EL PRIMER PASO HACIA LA FINAL</span><h1>CREA TU TORNEO<span class="orange">.</span></h1><p>El cuadro se genera al crear el torneo. Después podrás consultarlo sin que el sorteo cambie.</p>
+        <form #tournamentForm="ngForm" (ngSubmit)="submit(tournamentForm)">
+          <fieldset class="tournament-fields" [disabled]="saving()">
+            <label for="tournament-name">01 / Nombre del torneo</label><input id="tournament-name" name="name" [(ngModel)]="name" (ngModelChange)="clearValidationMessage()" required minlength="3" maxlength="80" placeholder="Ej. Copa del barrio" #nameField="ngModel" [attr.aria-invalid]="(nameField.touched||submitted()) && !!nameError()" aria-describedby="tournament-name-error">
+            @if((nameField.touched||submitted()) && nameError()){<small id="tournament-name-error" class="field-error" role="alert">{{nameError()}}</small>}
+            <fieldset class="format-choices" id="tournament-format" tabindex="-1"><legend>02 / Formato de competición</legend><div class="format-grid">@for(option of formats;track option.id){<label class="format-card" [class.chosen]="format===option.id"><input type="radio" name="format" [value]="option.id" [(ngModel)]="format"><span class="format-tag">{{option.short}}</span><strong>{{option.label}}</strong><span>{{option.description}}</span></label>}</div></fieldset>
+            <div class="competition-settings"><label>Modalidad<select name="pairMode" [(ngModel)]="pairMode" (ngModelChange)="clearValidationMessage()"><option value="individual">Individual · 1 contra 1</option><option value="manual">Parejas elegidas · 2 contra 2</option><option value="random">Parejas aleatorias · 2 contra 2</option></select></label>@if(format==='league'){<label>Vueltas<select name="leagueRounds" [(ngModel)]="leagueRounds"><option [ngValue]="1">Una vuelta</option><option [ngValue]="2">Ida y vuelta</option></select></label>}</div>
+            @if(pairMode!=='individual'){<p class="setting-help">Indica el total de personas: 8 jugadores forman 4 parejas. Cada pareja compite unida durante todo el torneo. {{pairMode==='random'?'Las parejas se sortean y se guardan al crear el torneo.':'Selecciona a los jugadores y ajusta las parejas más abajo.'}}</p>}
+            <div class="tournament-player-count"><label for="player-count">03 / Número de jugadores</label><input #countField="ngModel" type="number" id="player-count" name="playerCount" [(ngModel)]="playerCount" (ngModelChange)="clearValidationMessage()" min="2" max="128" step="1" required aria-describedby="player-count-help player-count-error" [attr.aria-invalid]="(countField.touched||submitted()) && !!countError()">@if((countField.touched||submitted()) && countError()){<small id="player-count-error" class="field-error" role="alert">{{countError()}}</small>}</div><small id="player-count-help">Entre 2 y 128 jugadores. Selecciona exactamente esa cantidad. {{format==='league'?'Los calendarios impares incluyen descansos.':'Si el cuadro lo necesita, habrá pases libres.'}}</small>
+            <div class="selection-heading" id="tournament-player-selection" tabindex="-1"><div><h2>ELIGE A TUS RIVALES<span class="orange">.</span></h2><p>Solo aparecen jugadores activos de tu plantilla.</p></div><span class="selection-count" aria-live="polite">{{selected().size}} / {{playerCount??'—'}} <small>SELECCIONADOS</small></span></div>
+            <div class="selection-tools"><label><span class="sr-only">Buscar jugador activo</span><input type="search" id="tournament-player-search" name="search" [ngModel]="search()" (ngModelChange)="search.set($event)" placeholder="Busca un nick…" maxlength="100"></label><button type="button" class="secondary" (click)="openPlayerForm()">＋ Crear jugador</button><button type="button" class="text-action" (click)="selectAll()" [disabled]="candidates().length>capacity()||candidatesLoading()">Seleccionar todos</button><button type="button" class="text-action" (click)="clearSelection()">Desmarcar todos</button></div>
+            @if(notice()){<div class="notice" role="status">{{notice()}}</div>}
+            @if(!candidatesLoading() && !countError() && playerCount!==null && candidates().length<playerCount){<p class="candidate-shortage">Necesitas {{playerCount}} jugadores activos y tienes {{candidates().length}}. Puedes crear los que faltan aquí sin perder los datos del torneo.</p>}
+            @if(candidatesLoading()){<p role="status">Cargando jugadores activos…</p>}
+            @else if(!candidates().length){<div class="candidate-empty"><p>No tienes jugadores activos disponibles.</p><button type="button" class="text-action" (click)="openPlayerForm()">Crear mi primer jugador ↗</button></div>}
+            @else {<div class="candidate-grid">@for(player of filtered();track player.id){<label class="candidate" [class.chosen]="selected().has(player.id)"><input type="checkbox" [checked]="selected().has(player.id)" (change)="toggle(player.id)" [attr.aria-label]="'Seleccionar a '+player.nick"><span class="candidate-initials" aria-hidden="true">{{initials(player.nick)}}</span><span>{{player.nick}}</span></label>} @empty {<p>No hay jugadores que coincidan con esa búsqueda.</p>}</div>}
+            @if(pairMode==='manual' && selected().size){<section class="manual-pairs"><h3>FORMA TUS PAREJAS.</h3><p>Cambia un jugador para intercambiarlo con su posición actual. Nadie aparece en dos parejas.</p><div class="pair-grid">@for(pair of pairRows();track $index;let team=$index){<div class="pair-editor"><span>PAREJA {{team+1}}</span>@for(id of pair;track $index;let member=$index){<label><span class="sr-only">Pareja {{team+1}}, jugador {{member+1}}</span><select [ngModel]="id" (ngModelChange)="swapPair(team*2+member,$event)" [ngModelOptions]="{standalone:true}">@for(player of pairChoices();track player.id){<option [ngValue]="player.id">{{player.nick}}</option>}</select></label>}@if(pair.length===1){<small>Selecciona otro jugador para completar la pareja.</small>}</div>}</div></section>}
+            <div class="draw-explanation"><span aria-hidden="true">✳</span><p>Selección sin duplicados. Enfrentamientos aleatorios. @if(format==='league'){Calendario todos contra todos. Los descansos no cuentan como partidos.} @else if(format==='groups_knockout'){Grupos equilibrados de hasta cuatro; se clasifican dos por grupo.} @else {Los pases libres se reparten en el sorteo; no cuentan como partidos jugados.} @if(auth.identity()?.mode==='guest'){Este torneo será temporal.}</p></div>
+          </fieldset>
+          @if(error()){<div class="error tournament-form-error" role="alert">{{error()}} @if(!validationError()){<button type="button" (click)="loadCandidates()" [disabled]="saving()">Recargar jugadores</button>}</div>}
+          <div class="tournament-form-actions"><button class="secondary" type="button" (click)="loadList()" [disabled]="saving()">Cancelar</button><button class="primary" type="submit" [disabled]="saving()||candidatesLoading()">{{saving()?'Guardando y sorteando…':'Crear torneo y sortear'}} ↗</button></div>
+        </form>
+      </section>
+    }
+    @if(mode()==='detail' && drawActive()){
+      <section class="draw-show draw-motion" aria-labelledby="draw-title">
+        <span class="kicker">EL AZAR HA HABLADO / SORTEO GUARDADO</span>
+        <h1 id="draw-title">QUE EMPIECE<br><span>EL JUEGO.</span></h1>
+        <p aria-live="polite">{{drawIndex()+1===drawItems().length?'Sorteo completo':drawRunning()?'Revelando el sorteo':'Sorteo en pausa'}} · {{drawIndex()+1}} de {{drawItems().length}} revelados</p>
+        <div class="draw-progress" role="progressbar" aria-label="Progreso del sorteo" [attr.aria-valuenow]="drawIndex()+1" [attr.aria-valuemax]="drawItems().length" aria-valuemin="0"><span [style.width.%]="100*(drawIndex()+1)/drawItems().length"></span></div>
+        <div class="draw-controls">
+          @if(drawIndex()+1<drawItems().length){<button class="secondary" (click)="toggleDraw()">{{drawRunning()?'Pausar':'Continuar'}}</button><button class="text-action" (click)="revealAllDraw()">Mostrar todos ahora</button>}
+          @else{<button class="secondary" (click)="replayDraw()">↻ Repetir animación</button>}
+          <button class="primary" (click)="finishDraw()">Ver competición ↗</button>
+        </div>
+        <p class="draw-saved-note">Los cruces revelados se quedan aquí. Repetir la animación no cambia el sorteo.</p>
+        @if(drawIndex()<0){<div class="draw-standby" role="status"><span aria-hidden="true">✳</span><strong>{{drawRunning()?'Preparando el primer cruce…':'Listo para empezar'}}</strong></div>}
+        <div class="draw-revealed-list">
+          @for(item of drawItems();track $index){@if($index<=drawIndex()){
+            <article class="draw-duel" [class.latest-draw]="$index===drawIndex()" [attr.aria-label]="item.title">
+              <span class="kicker">{{item.title}}<span class="draw-confirmed">REVELADO ✓</span></span>
+              <div><strong class="draw-left">{{item.left}}</strong><b class="draw-versus" aria-hidden="true">×</b><strong class="draw-right">{{item.right}}</strong></div>
+            </article>
+          }}
+        </div>
+      </section>
+    }
+    @if(mode() === 'detail' && !drawActive()) {
+      @if(loading()){<div class="tournament-empty" role="status">Recuperando el cuadro guardado…</div>}
+      @if(detail();as tournament){
+        <section class="tournament-detail-heading"><span class="kicker subdued">{{formatLabel(tournament.format)}} / {{pairLabel(tournament.pair_mode)}} / SORTEO GUARDADO</span><h1>{{tournament.name}}</h1><div class="detail-metadata"><span>{{tournament.participant_count}} JUGADORES @if(tournament.pair_mode!=='individual'){ / {{tournament.competitor_count}} PAREJAS}</span><time>{{tournament.created_at+'Z'|date:'dd.MM.yyyy'}}</time></div></section>
+        <div class="tournament-detail-actions"><button class="text-action" (click)="startDraw(tournament);scrollTop()">Ver sorteo ↗</button><button class="delete-tournament" (click)="openDelete(tournament)">Eliminar torneo</button></div><div class="phase-note"><strong>{{tournament.finished_at?"TORNEO FINALIZADO.":"CADA PARTIDO CUENTA."}}</strong><p>{{tournament.finished_at?"Los resultados quedan guardados y el torneo ya no admite cambios.":"Registra el marcador de cada partido disponible. Los ganadores avanzan automáticamente cuando se conocen sus rivales. Los resultados confirmados no se pueden editar."}} {{tournament.completed_matches}} {{tournament.completed_matches===1?'partido disputado':'partidos disputados'}}.</p>@if(tournament.format==='double_elimination'){<p>El ganador de la final del upper pasa a la final general. Su perdedor disputa la final del lower; el ganador del lower obtiene la otra plaza. La final general es única.</p>@if(tournament.competitor_count===2){<p>Con dos jugadores, el perdedor del upper obtiene directamente la plaza del lower.</p>}} @if(tournament.format==='league'){<p>Todos contra todos {{tournament.league_rounds===2?'a ida y vuelta':'a una vuelta'}}. Victoria: 3 puntos; empate: 1; derrota: 0. El primero gana la liga. Desempate por diferencia de goles y, si persiste, sorteo con aviso.</p>} @if(tournament.format==='groups_knockout'){<p>Todos contra todos a una vuelta. Pasan los dos primeros por grupo. En grupos de dos pasan ambos, según su posición final. Victoria: 3 puntos; empate: 1; derrota: 0. Se ordena por puntos, diferencia de goles (GF − GC) y, si sigue el empate, sorteo con aviso. Los dos primeros de cada grupo pasan al K.O.</p>}</div>
+        @if(tournament.champion;as champion){
+          <section class="champion-celebration" aria-label="Campeón del torneo" role="status">
+            <div class="champion-confetti" aria-hidden="true">@for(piece of confetti;track piece){<i [style.left.%]="(piece*37)%100" [style.animation-delay.s]="piece*.06" [style.--tilt]="(piece*29)+'deg'"></i>}</div>
+            <span class="kicker">BALLERS HALL OF FAME / {{tournament.name}}</span>
+            <svg class="champion-cup" viewBox="0 0 160 180" aria-hidden="true"><path d="M48 20h64v36c0 31-13 51-32 51S48 87 48 56Zm0 9H23v22c0 20 14 32 31 32m58-54h25v22c0 20-14 32-31 32M80 107v37m-22 0h44v15H58Z"/></svg>
+            <span class="champion-tag">{{tournament.pair_mode==='individual'?'CAMPEÓN':'CAMPEONES'}}</span><h2>{{champion.nick}}</h2>
+            <p>¡Enhorabuena, {{champion.nick}}!<br>{{tournament.pair_mode==='individual'?'La copa tiene dueño. El siguiente reto te espera.':'La copa es vuestra. El siguiente reto os espera.'}}</p>
+            <a class="text-action" href="#final-bracket">Ver el cuadro final ↓</a>
+          </section>
+        }
+        <div id="final-bracket"></div>
+        @for(stage of tournament.stages;track stage.key){
+          <section class="stage-section" [class.lower-stage]="stage.kind==='lower'" [class.final-stage]="stage.kind==='final'" [attr.aria-label]="stage.name"><div class="stage-heading"><h2>{{stage.name}}<span class="orange">.</span></h2><span class="kicker subdued">{{stage.kind==='league'?(tournament.league_rounds===2?'LIGA IDA Y VUELTA':'LIGA A UNA VUELTA'):stage.kind==='group'?'LIGA A UNA VUELTA':stage.kind==='lower'?'SEGUNDA OPORTUNIDAD':stage.kind==='final'?'POR EL TÍTULO':'EL CAMINO A LA FINAL'}}</span></div>
+            @if((stage.kind==='group'||stage.kind==='league')){
+              <p class="standings-caption">{{stage.ready?(stage.kind==='league'?'Clasificación definitiva · campeón en primera posición':'Clasificación definitiva · pasan los dos primeros'):'Clasificación provisional'}} · 3 puntos por victoria, 1 por empate.</p>
+              @if(stage.draw_used){<div class="draw-alert" role="status"><strong>⚑ Desempate por sorteo realizado</strong><p>Hubo empate a puntos y diferencia de goles. El orden sorteado se ha guardado y no cambia al recargar.</p><span>Jugadores afectados: @for(row of stage.standings;track row.participant_id){@if(row.by_draw){<b>{{row.nick}} · </b>}}</span></div>}
+              <div class="standings-scroll"><table class="standings-table"><caption class="sr-only">Clasificación de {{stage.name}}</caption><thead><tr><th scope="col">#</th><th scope="col">Jugador</th><th scope="col" title="Partidos jugados">PJ</th><th scope="col" title="Victorias">G</th><th scope="col" title="Empates">E</th><th scope="col" title="Derrotas">P</th><th scope="col" title="Goles a favor">GF</th><th scope="col" title="Goles en contra">GC</th><th scope="col" title="Diferencia de goles">DG</th><th scope="col">PTS</th></tr></thead><tbody>@for(row of stage.standings;track row.participant_id){<tr [class.qualifying-row]="stage.ready&&row.position<=(stage.kind==='league'?1:2)"><td>{{row.position}}</td><th scope="row">{{row.nick}} @if(row.by_draw){<small title="Posición resuelta por sorteo">⚑</small>}</th><td>{{row.played}}</td><td>{{row.won}}</td><td>{{row.drawn}}</td><td>{{row.lost}}</td><td>{{row.goals_for}}</td><td>{{row.goals_against}}</td><td>{{row.goal_difference>0?'+':''}}{{row.goal_difference}}</td><td><strong>{{row.points}}</strong></td></tr>}</tbody></table></div>
+            }
+            @if(!stage.rounds.length){<p>Con dos jugadores no hay partidos intermedios en el lower: su finalista será el perdedor del upper.</p>}
+            @if(stage.kind==='league'){<div class="league-navigation"><label>Jornada<select [ngModel]="leagueDay()" (ngModelChange)="leagueDay.set($event)">@for(day of stage.rounds;track day.number){<option [ngValue]="day.number">{{day.name}}</option>}</select></label><span>{{tournament.league_rounds===2?'IDA Y VUELTA':'UNA VUELTA'}} · {{stage.rounds.length}} JORNADAS</span></div>}
+            <div class="bracket-board" tabindex="0" role="region" [attr.aria-label]="'Cuadro de '+stage.name+'. Desplázate para ver todas las rondas.'">
+              @for(round of visibleRounds(stage);track round.number){<div class="bracket-round"><h3>{{round.name}} @if(round.number===1&&stage.kind!=='final'){<small>PRIMERA {{(stage.kind==='group'||stage.kind==='league')?'JORNADA':'RONDA'}}</small>}</h3><div class="round-games">@for(match of round.matches;track match.id){<article class="match-card" [class.bye-match]="match.state==='bye'" [class.empty-match]="match.state==='empty'" [class.completed-match]="match.state==='completed'" [attr.aria-label]="match.code"><div class="match-meta"><span>{{match.code}}</span><span>{{match.state==='completed'?'FINALIZADO':match.state==='scheduled'?'POR JUGAR':match.state==='bye'?'PASE LIBRE':match.state==='empty'?'SIN PARTIDO':'POR DEFINIR'}}</span></div>@for(slot of match.slots;track $index){<div class="match-side" [class.placeholder-side]="slot.kind!=='participant'" [class.winning-side]="match.result?.winner_participant_id===slot.participant_id&&slot.participant_id!==null"><span>{{slot.kind==='participant'?initials(slot.label):slot.kind==='bye'?'—':'↗'}}</span><strong>{{slot.label}}</strong>@if(match.result;as result){<b class="match-score">{{$index===0?result.home_score:result.away_score}}</b>}</div>}@if(match.result && match.result.home_score===match.result.away_score){<small class="bye-caption">{{(stage.kind==='group'||stage.kind==='league')?'Empate · 1 punto para cada jugador':'Ganador resaltado · por penaltis'}}</small>}@if(match.state==='scheduled' && !tournament.finished_at){<button class="record-result" (click)="openResult(stage,match)" [attr.aria-label]="'Registrar resultado de '+match.code">Registrar resultado ↗</button>}@if(match.state==='bye'){<small class="bye-caption">Avanza sin disputar partido</small>}</article>}</div></div>}
+            </div>
+          </section>
+        }
+        <details class="enrolled-roster"><summary>Ver los {{tournament.participant_count}} jugadores inscritos</summary><ol>@for(p of tournament.participants;track p.entry_id){<li>{{p.nick}} @if(!p.is_active){<span>Inactivo actualmente · conserva su plaza en este torneo</span>}</li>}</ol></details>
+      }
+    }
+  </main>
+  <footer class="tournament-footer"><a class="footer-logo" href="/">ballers<span>.gg</span></a><span>EL TALENTO PONE EL NOMBRE. TÚ CONSTRUYES LA COMPETICIÓN.</span></footer>
+</div>
+
+<app-participant-form (saved)="participantCreated($event)" />
+
+<dialog #resultDialog class="result-dialog" aria-labelledby="result-title" (cancel)="cancelResult($event)">
+  <form #resultForm="ngForm" (ngSubmit)="saveResult(resultForm)">
+    <div class="result-dialog-heading"><span class="kicker">EL RESULTADO ES TUYO</span><button type="button" aria-label="Cerrar resultado" (click)="closeResult()" [disabled]="resultBusy()">×</button></div>
+    <h2 id="result-title">REGISTRA EL MARCADOR<span class="orange">.</span></h2>
+    @if(chosenMatch();as match){
+      <span class="kicker subdued">PARTIDO {{match.code}}</span>
+      <fieldset [disabled]="resultBusy()" class="score-fields"><legend class="sr-only">Marcador del partido</legend>
+        <label for="home-score">{{match.slots[0].label}}<input autofocus id="home-score" name="homeScore" type="number" [(ngModel)]="homeScore" min="0" max="99" step="1" required placeholder="0"></label><span aria-hidden="true">:</span>
+        <label for="away-score">{{match.slots[1].label}}<input id="away-score" name="awayScore" type="number" [(ngModel)]="awayScore" min="0" max="99" step="1" required placeholder="0"></label>
+      </fieldset>
+      @if(homeScore!==null && awayScore!==null && homeScore===awayScore && !resultGroup()){
+        <fieldset class="penalty-choices" [disabled]="resultBusy()"><legend>Empate: ¿quién ganó por penaltis?</legend>@for(slot of match.slots;track $index){<label><input type="radio" name="penaltyWinner" [(ngModel)]="penaltyWinner" [value]="slot.participant_id" required>{{slot.label}}</label>}</fieldset><p class="result-help">Guarda los goles del partido sin sumar los de la tanda de penaltis.</p>
+      }
+      @if(resultGroup()){<p class="result-help">En grupos y ligas se permiten empates. Puntos y diferencia de goles se calculan con este marcador.</p>}
+      <p class="result-lock-note">Comprueba el marcador antes de confirmar: el resultado quedará bloqueado. Si es la final, el torneo se cerrará.</p>
+      @if(resultError()){<div class="error" role="alert">{{resultError()}}<button type="button" (click)="reloadResult()" [disabled]="resultBusy()">Recargar cuadro</button></div>}
+      <div class="result-actions"><button type="button" class="secondary" (click)="closeResult()" [disabled]="resultBusy()">Cancelar</button><button class="primary" type="submit" [disabled]="resultBusy()">{{resultBusy()?'Guardando…':'Confirmar resultado'}} ↗</button></div>
+    }
+  </form>
+</dialog>
+
+<dialog #deleteDialog class="result-dialog delete-dialog" aria-labelledby="delete-title" (cancel)="cancelDelete($event)">
+  <div class="result-dialog-heading"><span class="kicker">GESTIONAR TORNEO</span><button type="button" aria-label="Cerrar eliminación" (click)="closeDelete()" [disabled]="deleting()">×</button></div>
+  <h2 id="delete-title">¿ELIMINAR TORNEO<span class="orange">?</span></h2>
+  @if(deleteTarget();as target){<p class="delete-tournament-name">{{target.name}}</p><p>Se eliminarán el torneo, su cuadro, sus inscripciones y todos sus resultados. Esta acción no se puede deshacer.</p><p>Los jugadores seguirán en tu plantilla.</p>}
+  @if(deleteError()){<div class="error" role="alert">{{deleteError()}}<button type="button" (click)="refreshAfterDeleteError()" [disabled]="deleting()">Cerrar y recargar</button></div>}
+  <div class="result-actions"><button class="secondary" type="button" autofocus (click)="closeDelete()" [disabled]="deleting()">Cancelar</button><button class="danger-button" type="button" (click)="confirmDelete()" [disabled]="deleting()">{{deleting()?'Eliminando…':'Eliminar definitivamente'}}</button></div>
+</dialog>
